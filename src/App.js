@@ -227,7 +227,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import Dropzone from 'react-dropzone';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import ProgressBar from './components/ProgressBar'; // Import ProgressBar component
+// import ProgressBar from './components/ProgressBar'; // Import the ProgressBar component
 
 function App() {
   const [audioFile, setAudioFile] = useState(null);
@@ -237,6 +237,7 @@ function App() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [transcription, setTranscription] = useState("");
   const [loading, setLoading] = useState(false); // State for loading indicator
+  const [errorMessage, setErrorMessage] = useState(""); // State for error messages
 
   const onDocumentDrop = (files) => {
     setDocumentFile(files[0]);
@@ -262,6 +263,7 @@ function App() {
 
     try {
       setLoading(true); // Start loading
+      setErrorMessage(""); // Reset error message
       const response = await axios.post('http://localhost:5000/text-to-mp3', formData, {
         responseType: 'blob',
         onUploadProgress: (progressEvent) => {
@@ -277,7 +279,7 @@ function App() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setUploadProgress(0); // Reset upload progress after download
+      setUploadProgress(0);
 
       // Reset state after conversion
       setDocumentFile(null);
@@ -292,9 +294,9 @@ function App() {
     } catch (error) {
       console.error("Error converting document to MP3:", error);
       if (error.response) {
-        alert(`Error: ${error.response.data.error}`);
+        setErrorMessage(`Error: ${error.response.data.error}`);
       } else {
-        alert('An unexpected error occurred. Please try again.');
+        setErrorMessage('An unexpected error occurred. Please try again.');
       }
     } finally {
       setLoading(false); // Stop loading
@@ -312,11 +314,12 @@ function App() {
 
     try {
       setLoading(true); // Start loading
+      setErrorMessage(""); // Reset error message
       const response = await axios.post('http://localhost:5000/transcribe', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onDownloadProgress: (progressEvent) => {
+        onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setDownloadProgress(percentCompleted); // Track download progress
+          setUploadProgress(percentCompleted);
         }
       });
 
@@ -324,15 +327,14 @@ function App() {
 
       // Reset state after transcription
       setAudioFile(null);
-      setDownloadProgress(0); // Reset download progress after transcription
-
-      // Reload the page after a short delay
-      // setTimeout(() => {
-      //   window.location.reload(); // Reload the page after transcription
-      // }, 2000); // Adjust delay as needed
 
     } catch (error) {
       console.error("Error transcribing audio:", error);
+      if (error.response) {
+        setErrorMessage(`Error: ${error.response.data.error}`);
+      } else {
+        setErrorMessage('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false); // Stop loading
     }
@@ -346,6 +348,7 @@ function App() {
 
     try {
       setLoading(true); // Start loading
+      setErrorMessage(""); // Reset error message
       const response = await axios.post('http://localhost:5000/text-to-mp3', { text }, {
         responseType: 'blob',
         onDownloadProgress: (progressEvent) => {
@@ -361,7 +364,7 @@ function App() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setDownloadProgress(0); // Reset download progress after download
+      setDownloadProgress(0);
 
       // Reset the text state after conversion
       setText("");
@@ -373,6 +376,11 @@ function App() {
 
     } catch (error) {
       console.error("Error converting text to MP3:", error);
+      if (error.response) {
+        setErrorMessage(`Error: ${error.response.data.error}`);
+      } else {
+        setErrorMessage('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false); // Stop loading
     }
@@ -384,13 +392,13 @@ function App() {
 
       {/* Loading Indicator */}
       {loading && <div className="loading-indicator">Processing, please wait...</div>}
-
-      {/* Upload Progress Bar */}
-      {uploadProgress > 0 && <ProgressBar progress={uploadProgress} />} {/* Show upload progress bar */}
-      {downloadProgress > 0 && <ProgressBar progress={downloadProgress} />} {/* Show download progress bar */}
+      {errorMessage && <div className="alert alert-danger">{errorMessage}</div>} {/* Error message */}
 
       {/* Document Upload Section */}
       <div className="mb-4">
+        <br></br>
+        {uploadProgress > 0 && <p className="progress">Upload Progress: {uploadProgress}%</p>}
+        <br></br>
         <h3>Upload Document for MP3 Conversion</h3>
         <Dropzone
           onDrop={onDocumentDrop}
@@ -405,6 +413,7 @@ function App() {
         </Dropzone>
         {documentFile && <p className="text-success">Document "{documentFile.name}" has been added.</p>}
         <button className="btn btn-primary" onClick={handleDocumentToMp3}>Convert Document to MP3</button>
+        {/* {uploadProgress > 0 && <p className="progress">Upload Progress: {uploadProgress}%</p>} */}
         {transcription && (
           <div className="alert alert-info mt-3">
             <h4>Transcription:</h4>
@@ -429,6 +438,7 @@ function App() {
         </Dropzone>
         {audioFile && <p className="text-success">Audio file "{audioFile.name}" has been added.</p>}
         <button className="btn btn-success" onClick={handleAudioTranscription}>Transcribe Audio</button>
+
       </div>
 
       {/* Text Input Section */}
@@ -442,6 +452,7 @@ function App() {
           rows="4"
         />
         <button className="btn btn-secondary" onClick={handleTextToMp3}>Convert Text to MP3</button>
+        {downloadProgress > 0 && <p className="progress">Download Progress: {downloadProgress}%</p>}
       </div>
     </div>
   );
