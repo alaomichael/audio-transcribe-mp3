@@ -327,9 +327,9 @@ function App() {
       setDownloadProgress(0); // Reset download progress after transcription
 
       // Reload the page after a short delay
-      setTimeout(() => {
-        window.location.reload(); // Reload the page after transcription
-      }, 2000); // Adjust delay as needed
+      // setTimeout(() => {
+      //   window.location.reload(); // Reload the page after transcription
+      // }, 2000); // Adjust delay as needed
 
     } catch (error) {
       console.error("Error transcribing audio:", error);
